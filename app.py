@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 import numpy as np      
-import plotly.express as px
+#import plotly.express as px
 import plotly.graph_objects as go
 from datetime import datetime
 
@@ -157,7 +157,4 @@ for alerta in alertas:
 st.markdown('<h2 class="sub-header">📊 Datos de la empresa</h2>', unsafe_allow_html=True)
 st.dataframe(df)
 
-streamlit
-pandas
-numpy
-plotly
+
