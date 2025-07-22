@@ -37,6 +37,7 @@ df = generate_datos_empresa()
 #Título
 st.markdown('<h1 class="main-header"> 🚀 Dashboard Ejecutivo 2025</h1>',unsafe_allow_html=True)
 
+
 #Filtros
 col1, col2, col3 = st.columns(3)
 with col1:
@@ -46,21 +47,72 @@ with col2:
     categoria = st.selectbox("🎯 Categoría:", 
                             ["General", "Ventas", "Marketing", "Producto", "Finanzas", "Clientes"])
 with col3:
-    comparaciom = st.selectbox("📊 Comparación con:",
+    comparacion = st.selectbox("📊 Comparación con:",
                             ["Mes Anterior", "Trimestre Anterior", "Año Anterior", "Promedio del Año"])
+
+# --- FILTRO DE DATOS ---
+df_filtrado = df.copy()
+
+# Filtrar por periodo
+hoy = datetime.today()
+if periodo == "Últimos 30 días":
+    fecha_inicio = hoy - pd.Timedelta(days=30)
+elif periodo == "Último Trimestre":
+    fecha_inicio = hoy - pd.Timedelta(days=90)
+elif periodo == "Último año":
+    fecha_inicio = hoy - pd.Timedelta(days=365)
+else:
+    fecha_inicio = df['fecha'].min()
+
+df_filtrado = df_filtrado[df_filtrado['fecha'] >= fecha_inicio]
+
+# Filtrar por categoría (si existe la columna)
+if categoria != "General" and 'categoria' in df_filtrado.columns:
+    df_filtrado = df_filtrado[df_filtrado['categoria'] == categoria]
+
+# --- FILTRO DE COMPARACIÓN ---
+# Crea un segundo DataFrame filtrado para la comparación
+if comparacion == "Mes Anterior":
+    fecha_inicio_comp = fecha_inicio - pd.Timedelta(days=30)
+    fecha_fin_comp = fecha_inicio
+elif comparacion == "Trimestre Anterior":
+    fecha_inicio_comp = fecha_inicio - pd.Timedelta(days=90)
+    fecha_fin_comp = fecha_inicio
+elif comparacion == "Año Anterior":
+    fecha_inicio_comp = fecha_inicio - pd.Timedelta(days=365)
+    fecha_fin_comp = fecha_inicio
+elif comparacion == "Promedio del Año":
+    fecha_inicio_comp = hoy.replace(month=1, day=1)
+    fecha_fin_comp = hoy
+else:
+    fecha_inicio_comp = df['fecha'].min()
+    fecha_fin_comp = fecha_inicio
+
+df_comparacion = df.copy()
+df_comparacion = df_comparacion[(df_comparacion['fecha'] >= fecha_inicio_comp) & (df_comparacion['fecha'] < fecha_fin_comp)]
+
+# Si tienes columna de categoría, aplica también el filtro de categoría
+if categoria != "General" and 'categoria' in df_comparacion.columns:
+    df_comparacion = df_comparacion[df_comparacion['categoria'] == categoria]
+
+# Ahora puedes usar df_filtrado para el periodo actual y df_comparacion para el periodo de comparación en tus KPIs y gráficos
     
 #KPIs
 st.markdown('<h2 class="sub-header">📈 OKRs de Empresa</h2>', unsafe_allow_html=True)
 col1, col2, col3, col4 = st.columns(4)
 
 with col1:
-    ingresos = df[df['fecha'].dt.month == datetime.today().month]['ingresos_diarios'].sum()
-    # Filtra el mismo mes pero del año anterior
-    ingresos_anio_ant = df[
-        (df['fecha'].dt.month == datetime.today().month) &
-        (df['fecha'].dt.year == datetime.today().year - 1)
-    ]['ingresos_diarios'].sum()
-    # Calcula el delta
+    ingresos = df_filtrado['ingresos_diarios'].sum()
+    # Filtra el mismo periodo del año anterior
+    if not df_filtrado.empty:
+        mes = df_filtrado['fecha'].dt.month.iloc[0]
+        anio = df_filtrado['fecha'].dt.year.iloc[0] - 1
+        ingresos_anio_ant = df[
+            (df['fecha'].dt.month == mes) &
+            (df['fecha'].dt.year == anio)
+        ]['ingresos_diarios'].sum()
+    else:
+        ingresos_anio_ant = 0
     if ingresos_anio_ant > 0:
         delta = f"{((ingresos - ingresos_anio_ant) / ingresos_anio_ant) * 100:.2f}%"
     else:
@@ -68,13 +120,16 @@ with col1:
     st.metric("Ingresos Totales", f"${ingresos:,.0f}", delta=delta)
 
 with col2:
-    costos = df[df['fecha'].dt.month == datetime.today().month]['costos'].sum()
-    # Filtra el mismo mes pero del año anterior
-    costos_anio_ant = df[
-        (df['fecha'].dt.month == datetime.today().month) &
-        (df['fecha'].dt.year == datetime.today().year - 1)
-    ]['costos'].sum()
-    # Calcula el delta
+    costos = df_filtrado['costos'].sum()
+    if not df_filtrado.empty:
+        mes = df_filtrado['fecha'].dt.month.iloc[0]
+        anio = df_filtrado['fecha'].dt.year.iloc[0] - 1
+        costos_anio_ant = df[
+            (df['fecha'].dt.month == mes) &
+            (df['fecha'].dt.year == anio)
+        ]['costos'].sum()
+    else:
+        costos_anio_ant = 0
     if costos_anio_ant > 0:
         delta = f"{((costos - costos_anio_ant) / costos_anio_ant) * 100:.2f}%"
     else:
@@ -82,31 +137,35 @@ with col2:
     st.metric("Costos Totales", f"${costos:,.0f}", delta=delta)
 
 with col3:
-    usuarios_activos = df[df['fecha'].dt.month == datetime.today().month]['usuarios_activos'].sum()
-    # Filtra el mismo mes pero del año anterior
-    usuarios_activos_anio_ant = df[
-        (df['fecha'].dt.month == datetime.today().month) &
-        (df['fecha'].dt.year == datetime.today().year - 1)
-    ]['usuarios_activos'].sum()
-    # Calcula el delta
+    usuarios_activos = df_filtrado['usuarios_activos'].sum()
+    if not df_filtrado.empty:
+        mes = df_filtrado['fecha'].dt.month.iloc[0]
+        anio = df_filtrado['fecha'].dt.year.iloc[0] - 1
+        usuarios_activos_anio_ant = df[
+            (df['fecha'].dt.month == mes) &
+            (df['fecha'].dt.year == anio)
+        ]['usuarios_activos'].sum()
+    else:
+        usuarios_activos_anio_ant = 0
     if usuarios_activos_anio_ant > 0:
         delta = f"{((usuarios_activos - usuarios_activos_anio_ant) / usuarios_activos_anio_ant) * 100:.2f}%"
     else:
         delta = "N/A"
     st.metric("Usuarios Activos", f"{usuarios_activos:,.0f}", delta=delta)
-    
-    # Promedio de usuarios activos del mes actual
-    promedio_usuarios = df[df['fecha'].dt.month == datetime.today().month]['usuarios_activos'].mean()
+    promedio_usuarios = df_filtrado['usuarios_activos'].mean()
     st.write(f"Promedio diario de usuarios activos: {promedio_usuarios:,.2f}")
 
 with col4:  
-    tasa_conversion = df[df['fecha'].dt.month == datetime.today().month]['conversion_rate'].mean()
-    # Filtra el mismo mes pero del año anterior
-    tasa_conversion_anio_ant = df[
-        (df['fecha'].dt.month == datetime.today().month) &
-        (df['fecha'].dt.year == datetime.today().year - 1)
-    ]['conversion_rate'].mean()
-    # Calcula el delta
+    tasa_conversion = df_filtrado['conversion_rate'].mean()
+    if not df_filtrado.empty:
+        mes = df_filtrado['fecha'].dt.month.iloc[0]
+        anio = df_filtrado['fecha'].dt.year.iloc[0] - 1
+        tasa_conversion_anio_ant = df[
+            (df['fecha'].dt.month == mes) &
+            (df['fecha'].dt.year == anio)
+        ]['conversion_rate'].mean()
+    else:
+        tasa_conversion_anio_ant = 0
     if tasa_conversion_anio_ant > 0:
         delta = f"{((tasa_conversion - tasa_conversion_anio_ant) / tasa_conversion_anio_ant) * 100:.2f}%"
     else:
@@ -119,30 +178,37 @@ col1, col2 = st.columns(2)
 
 with col1:
     fig = go.Figure()
-    fig.add_trace(go.Scatter(x=df['fecha'], y=df['ingresos_diarios'], mode='lines', name='Ingresos Diarios',line=dict(color='blue')))
-    z = np.polyfit(range(len(df)), df['ingresos_diarios'], 1)
-    p = np.poly1d(z)
-    fig.add_trace(go.Scatter(x=df['fecha'], y=p(range(len(df))), mode='lines', name='Tendencia', line=dict(color='red', dash='dash')))
+    fig.add_trace(go.Scatter(x=df_filtrado['fecha'], y=df_filtrado['ingresos_diarios'], mode='lines', name='Ingresos Diarios',line=dict(color='blue')))
+    if not df_filtrado.empty:
+        z = np.polyfit(range(len(df_filtrado)), df_filtrado['ingresos_diarios'], 1)
+        p = np.poly1d(z)
+        fig.add_trace(go.Scatter(x=df_filtrado['fecha'], y=p(range(len(df_filtrado))), mode='lines', name='Tendencia', line=dict(color='red', dash='dash')))
     fig.update_layout(title="💰 Ingresos Diarios con Tendencia",height = 400, template = "plotly_white")
     st.plotly_chart(fig, use_container_width=True)
 
 with col2:
+    usuarios = df_filtrado['usuarios_activos'].sum()
     etapas = ['visitantes', 'leads', 'Oportunidades', 'clientes']
-    valores = [10000, 2500, 500, 200]
-    funnel = go.Figure(go.Funnel(y=etapas,x=valores, textinfo="value+percent initial"))
+    valores = [
+        usuarios,
+        usuarios * 0.4,      # 40% de visitantes son leads
+        usuarios * 0.1,      # 10% de visitantes son oportunidades
+        usuarios * 0.04      # 4% de visitantes son clientes
+    ]
+    funnel = go.Figure(go.Funnel(y=etapas, x=valores, textinfo="value+percent initial"))
     funnel.update_layout(title="🎯 Embudo de Ventas", height=400, template="plotly_white")
     st.plotly_chart(funnel, use_container_width=True)
 
 #Alerta inteligente
 st.markdown("## ⚠️ Alerta Inteligente")
 alertas = []
-if df['ingresos_diarios'].tail(7).mean() < df['ingresos_diarios'].head(-7).mean():
-    alertas.append({'tipo':'Advertencia', 'mensaje': 'Ingresos por debajo del promedio en últimoso 7 días','color': 'orange'})
+if not df_filtrado.empty and df_filtrado['ingresos_diarios'].tail(7).mean() < df_filtrado['ingresos_diarios'].head(-7).mean():
+    alertas.append({'tipo':'Advertencia', 'mensaje': 'Ingresos por debajo del promedio en últimos 7 días','color': 'orange'})
 
-if df['conversion_rate'].tail(1).iloc[0] < 2.0:
+if not df_filtrado.empty and df_filtrado['conversion_rate'].tail(1).iloc[0] < 2.0:
     alertas.append({'tipo':'Crítico', 'mensaje': 'Tasa de conversión por debajo del 2%','color': 'red'})
 
-if df['usuarios_activos'].tail(1).iloc[0] > df['usuarios_activos'].quantile(0.95):
+if not df_filtrado.empty and df_filtrado['usuarios_activos'].tail(1).iloc[0] > df_filtrado['usuarios_activos'].quantile(0.95):
     alertas.append({'tipo':'Éxito', 'mensaje': 'Usuarios activos en el 95% más alto','color': 'green'})
 
 for alerta in alertas:
@@ -155,6 +221,6 @@ for alerta in alertas:
 
 #Datos de la empresa
 st.markdown('<h2 class="sub-header">📊 Datos de la empresa</h2>', unsafe_allow_html=True)
-st.dataframe(df)
+st.dataframe(df_filtrado)
 
 
