@@ -15,13 +15,19 @@ st.set_page_config(
 
  # Generación de datos de ejemplo
 def generate_datos_empresa():
-       
     fechas = pd.date_range(start="2023-01-01", end=datetime.today(), freq='D')
+    categorias = np.random.choice(
+        ["Ventas", "Marketing", "Producto", "Finanzas", "Clientes"],
+        size=len(fechas)
+    )
+    usuarios_activos = np.random.normal(1000, 400, size=len(fechas))
+    usuarios_activos = np.clip(usuarios_activos, 0, 2000)  # Limita entre 0 y 2000
     datos ={
         'fecha': fechas,
+        'categoria': categorias,
         'ingresos_diarios': np.random.normal(25000, 150, size=len(fechas)),
         'costos': np.random.normal(12000, 3000, size=len(fechas)),
-        'usuarios_activos': np.random.normal(50, 200, size=len(fechas)),
+        'usuarios_activos': usuarios_activos,
         'conversion_rate': np.random.normal(2.5, 0.6, size=len(fechas)),
         'ltv_cliente': np.random.normal(180, 40, size=len(fechas)),
         'costo_adquisicion_cliente': np.random.normal(45, 12, size=len(fechas))
